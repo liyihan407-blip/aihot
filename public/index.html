@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AIHot</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="radar" aria-label="热点雷达">
+        <div class="radar-grid"></div>
+        <div class="radar-sweep"></div>
+        <div class="radar-core">
+          <span>AIHot</span>
+          <strong id="signalCount">0</strong>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">AI keyword intelligence</p>
+            <h1>把真正冒出来的信号挑出来</h1>
+          </div>
+          <div class="status" id="aiStatus">AI 检查中</div>
+        </header>
+
+        <section class="control-strip">
+          <form id="monitorForm" class="input-panel">
+            <label for="keyword">监控关键词</label>
+            <div class="field-row">
+              <input id="keyword" name="keyword" placeholder="例如：Claude Code、某产品名、某家公司" required>
+              <input name="intervalMinutes" type="number" min="5" max="1440" value="30" aria-label="监控间隔分钟">
+              <button type="submit">加入</button>
+            </div>
+          </form>
+
+          <form id="scopeForm" class="input-panel">
+            <label for="scope">热点范围</label>
+            <div class="field-row">
+              <input id="scope" name="scope" placeholder="例如：AI 编程、机器人、出海 SaaS" required>
+              <input name="intervalMinutes" type="number" min="10" max="1440" value="60" aria-label="热点刷新间隔分钟">
+              <button type="submit">追踪</button>
+            </div>
+          </form>
+        </section>
+
+        <nav class="actions" aria-label="快捷操作">
+          <button id="refreshAll" type="button">立即扫描</button>
+          <button id="enableNotify" type="button">开启浏览器通知</button>
+          <span id="toast" role="status"></span>
+        </nav>
+
+        <section class="source-strip" aria-label="信息源">
+          <span>信息源</span>
+          <div id="sourceList"></div>
+        </section>
+
+        <section class="columns">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>关键词监控</h2>
+              <span id="monitorCount">0</span>
+            </div>
+            <div id="monitors" class="stack empty">暂无关键词</div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h2>命中通知</h2>
+              <span id="noticeCount">0</span>
+            </div>
+            <div id="notifications" class="stack empty">还没有真实命中</div>
+          </div>
+        </section>
+
+        <section class="panel scope-panel">
+          <div class="panel-head">
+            <h2>热点范围</h2>
+            <span id="scopeCount">0</span>
+          </div>
+          <div id="scopes" class="scope-list empty">暂无追踪范围</div>
+        </section>
+
+        <section class="panel hot-panel">
+          <div class="panel-head">
+            <h2>热点发现</h2>
+            <span id="hotCount">0</span>
+          </div>
+          <div id="hotTopics" class="hot-grid empty">还没有热点报告</div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

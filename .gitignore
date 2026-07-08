@@ -1,0 +1,9 @@
+mcp-tokens.ps1
+data/state.json
+node_modules/
+.env
+.env.*
+!.env.example
+debug.log
+.vscode/
+地址.txt

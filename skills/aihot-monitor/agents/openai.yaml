@@ -1,0 +1,4 @@
+interface:
+  display_name: "AIHot Monitor"
+  short_description: "Run AIHot keyword monitoring and hotspot discovery."
+  default_prompt: "Use AIHot to monitor keywords, discover hotspots, and summarize actionable signals."
