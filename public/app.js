@@ -32,7 +32,7 @@ function escapeHtml(value) {
 }
 
 function relativeTime(value) {
-  if (!value) return "尚未运行";
+  if (!value) return "暂停中";
   const diff = Date.now() - new Date(value).getTime();
   const minutes = Math.round(Math.abs(diff) / 60000);
   const suffix = diff >= 0 ? "前" : "后";
@@ -41,6 +41,12 @@ function relativeTime(value) {
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours} 小时${suffix}`;
   return new Date(value).toLocaleString();
+}
+
+function confidencePercent(value) {
+  const number = Number(value || 0);
+  const normalized = number > 1 ? number : number * 100;
+  return Math.max(0, Math.min(100, Math.round(normalized)));
 }
 
 function renderSources(sources) {
@@ -52,16 +58,32 @@ function renderSources(sources) {
 function renderMonitors(monitors) {
   $("#monitorCount").textContent = monitors.length;
   $("#monitors").classList.toggle("empty", monitors.length === 0);
-  $("#monitors").innerHTML = monitors.length ? monitors.map((monitor) => `
-    <article class="item">
-      <div class="item-head">
-        <p class="item-title">${escapeHtml(monitor.keyword)}</p>
-        <button class="delete" data-delete-monitor="${monitor.id}" title="删除" aria-label="删除关键词">×</button>
-      </div>
-      <div class="meta">每 ${monitor.intervalMinutes} 分钟扫描 · 下次 ${relativeTime(monitor.nextRunAt)} · ${escapeHtml(monitor.status)}</div>
-      ${monitor.lastError ? `<div class="meta">来源异常：${escapeHtml(monitor.lastError)}</div>` : ""}
-    </article>
-  `).join("") : "暂无关键词";
+  $("#monitors").innerHTML = monitors.length ? monitors.map((monitor) => {
+    const enabled = monitor.enabled !== false;
+    return `
+      <article class="item ${enabled ? "" : "is-paused"}">
+        <div class="item-head">
+          <p class="item-title">${escapeHtml(monitor.keyword)}</p>
+          <div class="item-actions">
+            <button
+              class="switch ${enabled ? "is-on" : ""}"
+              data-toggle-monitor="${monitor.id}"
+              data-enabled="${enabled ? "false" : "true"}"
+              aria-pressed="${enabled}"
+              title="${enabled ? "暂停监控" : "开启监控"}"
+            >
+              ${enabled ? "开" : "关"}
+            </button>
+            <button class="delete" data-delete-monitor="${monitor.id}" title="删除" aria-label="删除关键词">×</button>
+          </div>
+        </div>
+        <div class="meta">
+          ${enabled ? `每 ${monitor.intervalMinutes} 分钟扫描 · 下次 ${relativeTime(monitor.nextRunAt)} · ${escapeHtml(monitor.status)}` : "已暂停，关键词已保留"}
+        </div>
+        ${monitor.lastError ? `<div class="meta">来源异常：${escapeHtml(monitor.lastError)}</div>` : ""}
+      </article>
+    `;
+  }).join("") : "暂无关键词";
 }
 
 function renderNotifications(notifications) {
@@ -79,7 +101,7 @@ function renderNotifications(notifications) {
         <div class="meta">${escapeHtml(notice.keyword)} · ${escapeHtml(notice.item.source)} · ${relativeTime(notice.createdAt)}</div>
         <p class="meta">${escapeHtml(notice.verdict.reason || notice.verdict.notificationBody || "")}</p>
         <a class="notice-link" href="${escapeHtml(notice.item.url)}" target="_blank" rel="noreferrer">查看来源</a>
-        <div class="badge-row">${tags}<span class="badge">置信 ${Math.round(Number(notice.verdict.confidence || 0) * 100)}%</span></div>
+        <div class="badge-row">${tags}<span class="badge">置信 ${confidencePercent(notice.verdict.confidence)}%</span></div>
       </article>
     `;
   }).join("") : "还没有真实命中";
@@ -110,19 +132,22 @@ function renderHotTopics(hotTopics) {
         <br>${escapeHtml(report.summary)}
       </div>
       <div class="hot-grid">
-        ${(report.topics || []).map((topic) => `
-          <div class="item">
-            <div class="item-head">
-              <p class="item-title">${escapeHtml(topic.title)}</p>
-              <span class="heat">${Math.round(Number(topic.heat || 0))}</span>
+        ${(report.topics || []).map((topic) => {
+          const sources = Array.isArray(topic.sources) ? topic.sources : [];
+          return `
+            <div class="item">
+              <div class="item-head">
+                <p class="item-title">${escapeHtml(topic.title)}</p>
+                <span class="heat">${Math.round(Number(topic.heat || 0))}</span>
+              </div>
+              <p class="meta">${escapeHtml(topic.why || "")}</p>
+              <div class="badge-row">
+                <span class="badge">风险 ${escapeHtml(topic.risk || "unknown")}</span>
+                ${sources.slice(0, 2).map((source) => `<a class="notice-link" href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.source)}</a>`).join("")}
+              </div>
             </div>
-            <p class="meta">${escapeHtml(topic.why || "")}</p>
-            <div class="badge-row">
-              <span class="badge">风险 ${escapeHtml(topic.risk || "unknown")}</span>
-              ${(topic.sources || []).slice(0, 2).map((source) => `<a class="notice-link" href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.source)}</a>`).join("")}
-            </div>
-          </div>
-        `).join("")}
+          `;
+        }).join("")}
       </div>
     </article>
   `).join("") : "还没有热点报告";
@@ -167,7 +192,7 @@ async function submitJson(form, path, map) {
   });
   form.reset();
   render(data);
-  toast("已加入队列，可点击立即扫描。");
+  toast("已保存。重复关键词会直接重新开启，不会创建多份。");
 }
 
 $("#monitorForm").addEventListener("submit", (event) => {
@@ -182,9 +207,18 @@ $("#scopeForm").addEventListener("submit", (event) => {
 
 document.addEventListener("click", async (event) => {
   const monitorId = event.target.dataset.deleteMonitor;
+  const toggleMonitorId = event.target.dataset.toggleMonitor;
   const scopeId = event.target.dataset.deleteScope;
   try {
     if (monitorId) render(await api(`/api/monitors/${monitorId}`, { method: "DELETE" }));
+    if (toggleMonitorId) {
+      const enabled = event.target.dataset.enabled === "true";
+      render(await api(`/api/monitors/${toggleMonitorId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ enabled })
+      }));
+      toast(enabled ? "关键词监控已开启。" : "关键词已暂停，记录仍保留。");
+    }
     if (scopeId) render(await api(`/api/scopes/${scopeId}`, { method: "DELETE" }));
   } catch (error) {
     toast(error.message);

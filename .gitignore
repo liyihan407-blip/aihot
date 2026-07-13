@@ -5,5 +5,6 @@ node_modules/
 .env.*
 !.env.example
 debug.log
+server.*.log
 .vscode/
 地址.txt

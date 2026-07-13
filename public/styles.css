@@ -303,6 +303,10 @@ input {
   background: #fff;
 }
 
+.item.is-paused {
+  background: #f5f3ec;
+}
+
 .item-head {
   display: flex;
   justify-content: space-between;
@@ -314,6 +318,12 @@ input {
   margin: 0;
   font-weight: 850;
   line-height: 1.28;
+}
+
+.item-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
 }
 
 .meta {
@@ -329,6 +339,22 @@ input {
   border-color: var(--line);
   color: var(--red);
   background: #fff;
+}
+
+.switch {
+  min-height: 34px;
+  min-width: 48px;
+  border-color: var(--line);
+  color: var(--muted);
+  background: #fff;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.switch.is-on {
+  border-color: var(--green);
+  color: #fff;
+  background: var(--green);
 }
 
 .badge-row {

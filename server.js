@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { loadEnv } = require("./src/env");
 const { getAiConfig } = require("./src/ai");
-const { createMonitor, createScope, decorateState, removeEntity, runDueJobs, startScheduler } = require("./src/jobs");
+const { createMonitor, createScope, decorateState, removeEntity, runDueJobs, saveKeyword, startScheduler, updateMonitor } = require("./src/jobs");
 const { readState } = require("./src/store");
 
 loadEnv();
@@ -59,9 +59,39 @@ async function handleApi(req, res) {
       return sendJson(res, 200, decorateState(readState()));
     }
 
+    if (req.method === "GET" && url.pathname === "/api/keywords") {
+      const state = decorateState(readState());
+      return sendJson(res, 200, { keywords: state.monitors });
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/keywords") {
+      const body = await readBody(req);
+      return sendJson(res, 201, decorateState(saveKeyword(body.keyword, {
+        intervalMinutes: body.intervalMinutes,
+        enabled: body.enabled
+      })));
+    }
+
+    if (req.method === "PATCH" && url.pathname.startsWith("/api/keywords/")) {
+      const id = url.pathname.split("/").pop();
+      const body = await readBody(req);
+      return sendJson(res, 200, decorateState(updateMonitor(id, body)));
+    }
+
+    if (req.method === "DELETE" && url.pathname.startsWith("/api/keywords/")) {
+      const id = url.pathname.split("/").pop();
+      return sendJson(res, 200, decorateState(removeEntity("monitor", id)));
+    }
+
     if (req.method === "POST" && url.pathname === "/api/monitors") {
       const body = await readBody(req);
       return sendJson(res, 201, decorateState(createMonitor(body.keyword, body.intervalMinutes)));
+    }
+
+    if (req.method === "PATCH" && url.pathname.startsWith("/api/monitors/")) {
+      const id = url.pathname.split("/").pop();
+      const body = await readBody(req);
+      return sendJson(res, 200, decorateState(updateMonitor(id, body)));
     }
 
     if (req.method === "POST" && url.pathname === "/api/scopes") {

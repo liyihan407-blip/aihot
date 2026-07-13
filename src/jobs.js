@@ -10,6 +10,10 @@ function decorateState(state) {
   const ai = getAiConfig();
   return {
     ...state,
+    monitors: (state.monitors || []).map((monitor) => ({
+      ...monitor,
+      enabled: monitor.enabled !== false
+    })),
     config: {
       aiProvider: ai.provider,
       aiProviderLabel: ai.providerLabel,
@@ -22,26 +26,65 @@ function decorateState(state) {
 }
 
 function createMonitor(keyword, intervalMinutes) {
+  return saveKeyword(keyword, { intervalMinutes, enabled: true });
+}
+
+function saveKeyword(keyword, options = {}) {
   const clean = String(keyword || "").trim();
-  if (!clean) throw new Error("关键词不能为空。");
+  if (!clean) throw new Error("Keyword is required.");
+  const enabled = options.enabled !== false;
+  const intervalMinutes = options.intervalMinutes;
+
   return mutateState((state) => {
+    const existing = (state.monitors || []).find((monitor) => monitor.keyword === clean);
+    if (existing) {
+      existing.intervalMinutes = clampNumber(intervalMinutes, 5, 1440, existing.intervalMinutes || DEFAULT_INTERVAL_MINUTES);
+      existing.enabled = enabled;
+      existing.status = enabled ? "waiting" : "paused";
+      existing.nextRunAt = enabled ? nowIso() : null;
+      existing.lastError = "";
+      return state;
+    }
+
     state.monitors.unshift({
       id: uid("mon"),
       keyword: clean,
       intervalMinutes: clampNumber(intervalMinutes, 5, 1440, DEFAULT_INTERVAL_MINUTES),
+      enabled,
       createdAt: nowIso(),
       lastRunAt: null,
-      nextRunAt: nowIso(),
-      status: "waiting",
+      nextRunAt: enabled ? nowIso() : null,
+      status: enabled ? "waiting" : "paused",
       lastError: ""
     });
     return state;
   });
 }
 
+function updateMonitor(id, patch = {}) {
+  return mutateState((state) => {
+    const monitor = (state.monitors || []).find((item) => item.id === id);
+    if (!monitor) throw new Error("Monitor not found.");
+
+    if (typeof patch.enabled === "boolean") {
+      monitor.enabled = patch.enabled;
+      monitor.status = patch.enabled ? "waiting" : "paused";
+      monitor.nextRunAt = patch.enabled ? nowIso() : null;
+      monitor.lastError = "";
+    }
+
+    if (patch.intervalMinutes !== undefined) {
+      monitor.intervalMinutes = clampNumber(patch.intervalMinutes, 5, 1440, monitor.intervalMinutes || DEFAULT_INTERVAL_MINUTES);
+      if (monitor.enabled !== false) monitor.nextRunAt = nowIso();
+    }
+
+    return state;
+  });
+}
+
 function createScope(scope, intervalMinutes) {
   const clean = String(scope || "").trim();
-  if (!clean) throw new Error("范围不能为空。");
+  if (!clean) throw new Error("Scope is required.");
   return mutateState((state) => {
     state.scopes.unshift({
       id: uid("scope"),
@@ -76,6 +119,7 @@ function scheduleNext(item) {
 }
 
 async function runMonitor(monitor, force = false) {
+  if (monitor.enabled === false) return { skipped: true, disabled: true };
   if (!due(monitor, force)) return { skipped: true };
   const collected = await collectSources(monitor.keyword);
   const results = [];
@@ -169,6 +213,11 @@ async function runDueJobs(options = {}) {
   try {
     if (target === "all" || target === "monitors") {
       for (const monitor of state.monitors) {
+        if (monitor.enabled === false) {
+          report.monitors.push({ id: monitor.id, result: { skipped: true, disabled: true } });
+          continue;
+        }
+
         try {
           report.monitors.push({ id: monitor.id, result: await runMonitor(monitor, force) });
         } catch (error) {
@@ -223,6 +272,8 @@ module.exports = {
   createScope,
   decorateState,
   removeEntity,
+  saveKeyword,
+  updateMonitor,
   runDueJobs,
   startScheduler
 };
