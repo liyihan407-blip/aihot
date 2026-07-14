@@ -264,3 +264,154 @@ server.js
 - SiliconFlow 请求使用 `https://api.siliconflow.cn/v1/chat/completions`、`Authorization: Bearer <token>`、`response_format: { "type": "text" }`，并通过 system prompt 要求模型只输出 JSON，再由本地 `extractJsonObject` 容错解析。
 - OpenRouter 仍使用 `response_format: { "type": "json_object" }` 和 `provider.require_parameters: true`。
 - `/api/state` 的 `config` 返回 `aiProvider`、`aiProviderLabel`、`hasAiKey`、`model`，保留 `hasOpenRouterKey` 作为旧字段兼容。
+
+## Sprint 2026-07-14 筛选与排序
+
+用户确认本轮采用贴近日常使用的筛选与排序方式，主要作用于“命中通知 / 热点结果”列表。关键词监控管理区保持轻量，不额外增加复杂筛选器。
+
+### 功能范围
+
+筛选维度：
+
+| 维度 | 可选值来源 | 实现说明 |
+| --- | --- | --- |
+| 信息来源 | `config.sources` 与结果中的 `item.source` / topic sources | 支持全部来源和单一来源过滤 |
+| 重要性 | `urgent` / `high` / `medium` / `low` | 由 `verdict.urgency` 或 topic `heat` 映射得到 |
+| 关键词 | `monitors[].keyword` | 通知列表按 `notice.keyword` 过滤；热点结果可按 scope 或标题摘要做文本匹配 |
+| 时间范围 | 1 小时 / 6 小时 / 24 小时 / 7 天 / 全部 | 通知按 `createdAt`；热点报告按 `createdAt`，topic 无独立发现时间时继承报告时间 |
+
+排序方式：
+
+| 排序 | 数据来源 | 实现说明 |
+| --- | --- | --- |
+| 热度综合 | `scoreHint`、topic `heat`、AI 输出热度 | 现有候选源已提供 `scoreHint`，热点 topic 优先使用 `heat` |
+| 相关性 | `verdict.confidence` | 命中通知使用 AI 置信度；热点 topic 暂无独立相关性时可回退到 `heat` |
+| 最新发布 | `item.publishedAt`、topic sources 的 `publishedAt` | 无发布时间的结果排在后面 |
+| 最新发现 | `createdAt` | 使用通知或报告入库时间 |
+| 重要程度 | `verdict.urgency`、topic `heat` | 默认排序，分数相同时按最新发现倒序 |
+
+### 重要性映射
+
+当前数据结构里通知已有 `verdict.urgency` 数字字段，热点 topic 已有 `heat` 数字字段。本轮不强制修改 AI 响应 schema，前端按数值映射展示和过滤：
+
+| 等级 | 分数范围 |
+| --- | --- |
+| urgent | 80-100 |
+| high | 60-79 |
+| medium | 40-59 |
+| low | 0-39 |
+
+### 实现策略
+
+- 优先做前端本地筛选和排序，不新增服务端查询参数，避免扩大 API 与存储改动面。
+- 在 `public/app.js` 中维护筛选状态，例如 source、importance、keyword、timeRange、sortBy。
+- 在渲染通知和热点前派生 filtered/sorted 数组，原始 `state.data` 不被修改。
+- 筛选控件放在主结果区顶部，保持雷达/信号工作台视觉，不改成传统后台表格。
+- 信息来源和关键词选项从 `/api/state` 返回的数据动态生成，避免前后端重复写死。
+- 对缺失字段做稳定降级：缺少发布时间时排到后面；缺少 urgency/heat 时按 0 处理；缺少来源时归入未知来源但默认仍显示。
+- 需要新增或更新前端纯函数测试时，优先把排序/过滤逻辑抽成可测试函数；如暂不拆分测试，应至少运行 `npm test` 并做浏览器交互验证。
+
+### 默认行为
+
+- 默认排序：重要程度优先，分数相同时按最新发现倒序。
+- 默认筛选：信息来源全部、重要性全部、关键词全部、时间范围全部。
+- 刷新状态后保留当前筛选与排序选择，不因为后台轮询自动重置用户视图。
+
+### 待确认后改动文件
+
+- `docs/requirements.md`：记录本轮产品需求。
+- `docs/technical-plan.md`：记录实现方案。
+- `public/index.html`：增加筛选与排序控件。
+- `public/app.js`：增加筛选状态、排序/过滤逻辑和渲染入口。
+- `public/styles.css`：补充控件样式，保持当前工作台视觉。
+- `tests/*`：视最终拆分方式补充排序/过滤逻辑测试。
+
+## Sprint 2026-07-14 结果卡片信息增强
+
+用户确认需要在结果卡片上展示更多用于人工判断价值的信息。本轮继续保持前端轻量增强，不新增后端抓取和存储字段，优先用当前 `notifications`、`hotTopics`、`item`、`verdict`、`topic`、`sources` 中已经存在的数据。
+
+### 数据映射
+
+通知卡片：
+
+| 展示信息 | 数据来源 | 降级策略 |
+| --- | --- | --- |
+| 标题 | `verdict.notificationTitle` / `item.title` | 无标题时显示来源标题 |
+| 来源 | `item.source` | 缺失时显示“未知来源” |
+| 关键词 | `notice.keyword` | 缺失时不显示关键词徽标 |
+| 重要性 | `verdict.urgency` 映射等级 | 缺失时按 0 分 low |
+| 相关性 | `verdict.confidence` | 缺失时显示 0% |
+| 热度 | `item.scoreHint` / `verdict.urgency` | 缺失时显示 0 |
+| 发布时间 | `item.publishedAt` | 无法解析时显示原始字符串或“未知” |
+| 发现时间 | `notice.createdAt` | 无法解析时显示“未知” |
+| 原始描述 | `item.summary` | 缺失时使用 `verdict.notificationBody` 或 URL |
+| AI 摘要 | `verdict.notificationBody` | 缺失时使用原始描述 |
+| AI 判断理由 | `verdict.reason` | 缺失时不显示该行 |
+| AI Provider | `verdict.aiProvider` / `verdict.model` | 缺失时不显示 |
+| 标签 | `verdict.tags` | 缺失时不显示 |
+
+热点卡片：
+
+| 展示信息 | 数据来源 | 降级策略 |
+| --- | --- | --- |
+| 标题 | `topic.title` | 缺失时不渲染该 topic |
+| 来源 | `topic.sources[].source` 或 `topic.why` | 缺失时不显示来源链接 |
+| 重要性 | `topic.heat` 映射等级 | 缺失时按 0 分 low |
+| 热度 | `topic.heat` | 缺失时显示 0 |
+| 发布时间 | `topic.sources[].publishedAt` 最新值 | 缺失时显示未知 |
+| 发现时间 | `report.createdAt` | 缺失时显示未知 |
+| 原始描述 | `topic.sources[].summary` | 缺失时使用 `topic.why` |
+| AI 判断理由 | `topic.why` / `topic.reason` | 缺失时不显示 |
+| 风险 | `topic.risk` | 缺失时显示 unknown |
+
+### UI 策略
+
+- 默认卡片只展示标题、关键徽标、指标网格、原始描述和来源链接，便于快速扫描。
+- 使用原生 `<details>` / `<summary>` 做展开详情，不引入新依赖。
+- 展开区展示 AI 摘要、AI 判断理由、风险、Provider、标签、互动/热度数据和完整时间信息。
+- 对热点 topic 继续保持双列网格；移动端按现有断点收敛为单列。
+- 不增加“全部展开”按钮，避免主结果区过重。
+
+## Sprint 2026-07-14 统一监控词、全网搜索与实时通知
+
+本轮在不引入新依赖的前提下扩展产品工作台。继续使用 CommonJS 主线：`server.js`、`src/jobs.js`、`src/sources.js`、`public/*`。
+
+### 统一监控词实现
+
+- 新增后端方法 `saveWatchTerm(term, options)`，内部复用 `saveKeyword()` 和 `createScope()`。
+- `createScope()` 增加同名去重，避免每次添加同一监控词都创建重复热点范围。
+- `scopes` 增加可选 `enabled` 字段；调度热点范围时跳过 `enabled === false` 的范围。
+- 监控词开关以 `monitor.enabled` 为主，同时同步同名 `scope.enabled`。
+- 删除监控词时删除 monitor，并删除同名 scope，保持 UI 概念一致。
+- 旧接口保留兼容；新增 `/api/watch-terms`、`PATCH /api/watch-terms/:id`、`DELETE /api/watch-terms/:id` 供新 UI 使用。
+
+### 全网搜索实现
+
+- 新增 `POST /api/search`，请求体 `{ "query": "..." }`。
+- 服务端调用 `collectSources(query)`，返回 `{ query, items, errors, searchedAt }`。
+- 搜索不写入 `data/state.json`，不触发 AI 判定和通知入库。
+- 前端新增搜索模式和搜索结果区，复用卡片样式展示结果。
+
+### WebSocket 实时通知实现
+
+- 在 `server.js` 原生处理 HTTP Upgrade，不引入 `ws` 依赖。
+- 服务端维护已连接 socket 集合，发送 JSON text frame。
+- `src/jobs.js` 增加轻量事件订阅：`subscribeJobEvents(listener)` 和内部 `emitJobEvent(event)`。
+- 新命中通知写入 state 后发出 `notification` 事件。
+- 新热点报告写入 state 后发出 `hotspot` 事件。
+- 前端连接 `/ws`，收到事件后插入侧边通知面板，并触发一次 `loadState()` 同步主列表。
+- 前端 WebSocket 断开后延迟重连；原轮询仍保留作为兜底。
+
+### UI 实现
+
+- 顶部控制区使用三个模式按钮：热点雷达、监控词、搜索。
+- 监控词模式显示单一输入框和开关列表。
+- 搜索模式显示搜索输入框、搜索按钮和搜索结果。
+- 右侧固定或浮动通知面板展示实时消息；移动端转为普通卡片流。
+- 不引入图标库，使用文本和现有视觉语言保持轻量。
+
+### 风险与降级
+
+- 原生 WebSocket 实现仅需要服务端向浏览器推送文本事件，不处理复杂双向消息。
+- 浏览器不支持 WebSocket 时，页面仍可通过 30 秒轮询刷新结果。
+- 搜索依赖公开来源，部分来源失败时只展示错误摘要和可用结果。

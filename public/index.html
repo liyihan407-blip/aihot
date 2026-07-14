@@ -3,93 +3,247 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#07080d">
     <title>AIHot</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
+    <div class="background-beams" data-aceternity="background-beams" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
     <main class="shell">
-      <section class="radar" aria-label="热点雷达">
-        <div class="radar-grid"></div>
-        <div class="radar-sweep"></div>
-        <div class="radar-core">
-          <span>AIHot</span>
-          <strong id="signalCount">0</strong>
+      <header class="topbar">
+        <div class="brand-block">
+          <p class="eyebrow">AI keyword intelligence</p>
+          <h1>把正在冒头的 AI 信号，第一时间抓出来</h1>
+          <p class="lead">为 AI 编程博主设计的热点雷达：盯关键词、筛噪声、聚合趋势，把值得分享的内容推到你眼前。</p>
         </div>
+        <div class="status-card">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div>
+            <p>AI 引擎状态</p>
+            <strong id="aiStatus">连接检查中</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="command-grid signal-hero" aria-label="热点指挥台">
+        <div class="radar-panel" data-aceternity="spotlight">
+          <div class="radar" aria-label="热点雷达">
+            <div class="radar-grid"></div>
+            <div class="radar-sweep"></div>
+            <div class="radar-core">
+              <span>AIHot</span>
+              <strong id="signalCount">0</strong>
+              <em>signals</em>
+            </div>
+          </div>
+          <div class="radar-copy">
+            <p>今日优先级</p>
+            <strong>先发现，再判断，马上分享。</strong>
+          </div>
+        </div>
+
+        <section class="signal-command panel" aria-label="命中通知总览">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Signal inbox first</p>
+              <h2>先看命中，再管理规则</h2>
+            </div>
+          </div>
+          <div class="metric-strip" aria-label="关键指标">
+            <div>
+              <span id="noticeCountMetric">0</span>
+              <p>命中通知</p>
+            </div>
+            <div>
+              <span id="monitorCountMetric">0</span>
+              <p>关键词</p>
+            </div>
+            <div>
+              <span id="scopeCountMetric">0</span>
+              <p>范围</p>
+            </div>
+            <div>
+              <span id="hotCountMetric">0</span>
+              <p>报告</p>
+            </div>
+          </div>
+          <nav class="actions" aria-label="快捷操作">
+            <button id="refreshAll" class="moving-border" type="button"><span>立即扫描</span></button>
+            <button id="enableNotify" type="button">开启浏览器通知</button>
+            <span id="toast" role="status"></span>
+          </nav>
+        </section>
       </section>
 
-      <section class="workspace">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">AI keyword intelligence</p>
-            <h1>把真正冒出来的信号挑出来</h1>
-          </div>
-          <div class="status" id="aiStatus">AI 检查中</div>
-        </header>
-
-        <section class="control-strip">
-          <form id="monitorForm" class="input-panel">
-            <label for="keyword">监控关键词</label>
-            <div class="field-row">
-              <input id="keyword" name="keyword" placeholder="例如：Claude Code、某产品名、某家公司" required>
-              <input name="intervalMinutes" type="number" min="5" max="1440" value="30" aria-label="监控间隔分钟">
-              <button type="submit">保存</button>
+      <section class="workbench-layout">
+        <aside class="sidebar-rail" aria-label="监控侧边栏">
+          <section class="panel compact-panel control-panel">
+            <div class="mode-tabs" aria-label="工作模式">
+              <button class="mode-tab is-active" type="button" data-mode="radar">热点雷达</button>
+              <button class="mode-tab" type="button" data-mode="watch">监控词</button>
+              <button class="mode-tab" type="button" data-mode="search">搜索</button>
             </div>
-          </form>
 
-          <form id="scopeForm" class="input-panel">
-            <label for="scope">热点范围</label>
-            <div class="field-row">
-              <input id="scope" name="scope" placeholder="例如：AI 编程、机器人、出海 SaaS" required>
-              <input name="intervalMinutes" type="number" min="10" max="1440" value="30" aria-label="热点刷新间隔分钟">
-              <button type="submit">追踪</button>
+            <div class="mode-pane is-active" data-pane="radar">
+              <div class="panel-label">
+                <span>01</span>
+                <div>
+                  <label>热点雷达</label>
+                  <p>打开监控词开关后，系统会自动发现命中和热点。</p>
+                </div>
+              </div>
             </div>
-          </form>
-        </section>
 
-        <nav class="actions" aria-label="快捷操作">
-          <button id="refreshAll" type="button">立即扫描</button>
-          <button id="enableNotify" type="button">开启浏览器通知</button>
-          <span id="toast" role="status"></span>
-        </nav>
+            <div class="mode-pane" data-pane="watch">
+              <form id="watchTermForm">
+                <div class="panel-label">
+                  <span>02</span>
+                  <label for="watchTerm">监控词</label>
+                </div>
+                <div class="field-row unified-field">
+                  <input id="watchTerm" name="term" placeholder="输入要监控的关键词，如：GPT-5、AI 编程、Cursor..." required>
+                  <button class="primary-action" type="submit">添加</button>
+                </div>
+              </form>
+            </div>
 
-        <section class="source-strip" aria-label="信息源">
-          <span>信息源</span>
-          <div id="sourceList"></div>
-        </section>
+            <div class="mode-pane" data-pane="search">
+              <form id="searchForm">
+                <div class="panel-label">
+                  <span>03</span>
+                  <label for="searchQuery">全网搜索</label>
+                </div>
+                <div class="field-row unified-field">
+                  <input id="searchQuery" name="query" placeholder="搜索公开来源里的任意关键词" required>
+                  <button class="primary-action" type="submit">搜索</button>
+                </div>
+              </form>
+            </div>
+          </section>
 
-        <section class="columns">
-          <div class="panel">
+          <section class="panel compact-panel watch-panel">
             <div class="panel-head">
-              <h2>关键词监控</h2>
+              <div>
+                <p class="eyebrow">Watch list</p>
+                <h2>监控词</h2>
+              </div>
               <span id="monitorCount">0</span>
             </div>
-            <div id="monitors" class="stack empty">暂无关键词</div>
-          </div>
+            <div id="monitors" class="watch-grid empty">暂无监控词，先添加一个你正在追的 AI 信号。</div>
+          </section>
 
-          <div class="panel">
+          <section class="panel compact-panel source-panel" aria-label="信息源">
             <div class="panel-head">
-              <h2>命中通知</h2>
+              <div>
+                <p class="eyebrow">Sources</p>
+                <h2>信息源</h2>
+              </div>
+            </div>
+            <div id="sourceList"></div>
+          </section>
+        </aside>
+
+        <section class="main-feed">
+          <section id="searchResultsPanel" class="panel search-results-panel" hidden>
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Search results</p>
+                <h2 id="searchTitle">全网搜索</h2>
+              </div>
+              <span id="searchCount">0</span>
+            </div>
+            <div id="searchErrors" class="source-errors"></div>
+            <div id="searchResults" class="stack empty">输入关键词后开始搜索公开来源。</div>
+          </section>
+
+          <section class="panel filter-panel" aria-label="结果筛选和排序">
+            <div class="filter-grid">
+              <label>
+                <span>信息来源</span>
+                <select id="filterSource">
+                  <option value="all">全部来源</option>
+                </select>
+              </label>
+              <label>
+                <span>重要性</span>
+                <select id="filterImportance">
+                  <option value="all">全部重要性</option>
+                  <option value="urgent">urgent</option>
+                  <option value="high">high</option>
+                  <option value="medium">medium</option>
+                  <option value="low">low</option>
+                </select>
+              </label>
+              <label>
+                <span>关键词</span>
+                <select id="filterKeyword">
+                  <option value="all">全部关键词</option>
+                </select>
+              </label>
+              <label>
+                <span>时间范围</span>
+                <select id="filterTimeRange">
+                  <option value="all">全部时间</option>
+                  <option value="1h">最近 1 小时</option>
+                  <option value="6h">最近 6 小时</option>
+                  <option value="24h">最近 24 小时</option>
+                  <option value="7d">最近 7 天</option>
+                </select>
+              </label>
+              <label>
+                <span>排序方式</span>
+                <select id="sortBy">
+                  <option value="importance">重要程度</option>
+                  <option value="heat">热度综合</option>
+                  <option value="relevance">相关性</option>
+                  <option value="published">最新发布</option>
+                  <option value="discovered">最新发现</option>
+                </select>
+              </label>
+              <button id="resetFilters" type="button">重置</button>
+            </div>
+          </section>
+
+          <section class="panel signal-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Signal inbox</p>
+                <h2>命中通知</h2>
+              </div>
               <span id="noticeCount">0</span>
             </div>
-            <div id="notifications" class="stack empty">还没有真实命中</div>
-          </div>
+            <div id="notifications" class="stack empty">还没有真实命中，扫描后会把高价值线索放在这里。</div>
+          </section>
+
+          <section class="panel hot-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Hot topics</p>
+                <h2>热点发现</h2>
+              </div>
+              <span id="hotCount">0</span>
+            </div>
+            <div id="hotTopics" class="hot-grid empty">还没有热点报告，点击立即扫描生成第一份趋势判断。</div>
+          </section>
         </section>
 
-        <section class="panel scope-panel">
+        <aside class="notification-rail panel" aria-label="实时通知">
           <div class="panel-head">
-            <h2>热点范围</h2>
-            <span id="scopeCount">0</span>
+            <div>
+              <p class="eyebrow">Realtime</p>
+              <h2>通知</h2>
+            </div>
+            <button id="markRealtimeRead" type="button">全部已读</button>
           </div>
-          <div id="scopes" class="scope-list empty">暂无追踪范围</div>
-        </section>
-
-        <section class="panel hot-panel">
-          <div class="panel-head">
-            <h2>热点发现</h2>
-            <span id="hotCount">0</span>
-          </div>
-          <div id="hotTopics" class="hot-grid empty">还没有热点报告</div>
-        </section>
+          <div id="wsStatus" class="ws-status">连接中</div>
+          <div id="realtimeList" class="realtime-list empty">暂无实时通知。</div>
+        </aside>
       </section>
     </main>
 
