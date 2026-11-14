@@ -4,7 +4,34 @@ node_modules/
 .env
 .env.*
 !.env.example
+!.env.docker.example
 debug.log
 server.*.log
+project/logs/*.log
 .vscode/
+target/
+backend/target/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+data/*.db
+data/*.db.*
+.test-mysql/
+*.pid
 地址.txt
+
+.npm-cache/
+
+# 本机编辑器和 AI 工具配置
+.idea/
+.agents/
+.codex/
+skills-lock.json
+
+# 本机迁移笔记与历史学习资料，不作为当前版本使用文档发布
+project/docs/java-migration-checkpoint.md
+project/docs/tech-stack-learning-roadmap.md
+project/docs/requirements.md
+project/docs/technical-plan.md
+project/docs/validation.md
+project/docs/keyword-api.md

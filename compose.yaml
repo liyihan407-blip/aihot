@@ -1,0 +1,43 @@
+# 从 .env 读取你填写的值。仅供个人单实例部署，不要扩容 app 副本。
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: aihot
+      MYSQL_USER: ${DB_USERNAME:-aihot}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?请先在 .env 填写 DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?请先填写 MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    # 不向公网映射 3306，应用通过 Compose 内网访问数据库。
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      PORT: 8787
+      BIND_ADDRESS: 0.0.0.0
+      DB_URL: jdbc:mysql://mysql:3306/aihot?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+      DB_USERNAME: ${DB_USERNAME:-aihot}
+      DB_PASSWORD: ${DB_PASSWORD:?请先填写 DB_PASSWORD}
+      # 部署时必须填写随机长令牌，避免他人消耗模型额度。
+      API_TOKEN: ${API_TOKEN:?请先填写 API_TOKEN}
+      LEGACY_IMPORT: "false"
+    # 默认仅服务器本机访问，再由 Nginx 提供 HTTPS。
+    ports:
+      - "127.0.0.1:${PORT:-8787}:8787"
+
+volumes:
+  mysql-data:

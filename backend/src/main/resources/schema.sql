@@ -1,0 +1,34 @@
+CREATE TABLE IF NOT EXISTS keywords (
+ id VARCHAR(40) PRIMARY KEY, term VARCHAR(160) NOT NULL UNIQUE, enabled BOOLEAN NOT NULL,
+ interval_minutes INT NOT NULL, next_run_at VARCHAR(40), last_run_at VARCHAR(40), created_at VARCHAR(40) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS hotspots (
+ id VARCHAR(64) PRIMARY KEY, url_key VARCHAR(64) NOT NULL UNIQUE, source VARCHAR(40) NOT NULL,
+ title VARCHAR(1000) NOT NULL, published_at VARCHAR(40), created_at VARCHAR(40) NOT NULL,
+ relevance INT NOT NULL, importance VARCHAR(12) NOT NULL, heat DOUBLE NOT NULL,
+ bookmarked BOOLEAN NOT NULL DEFAULT FALSE, payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS keyword_hotspots (
+ keyword_id VARCHAR(40) NOT NULL, hotspot_id VARCHAR(64) NOT NULL,
+ relevance INT NOT NULL, importance VARCHAR(12) NOT NULL, payload TEXT NOT NULL,
+ PRIMARY KEY(keyword_id, hotspot_id),
+ FOREIGN KEY(keyword_id) REFERENCES keywords(id) ON DELETE CASCADE,
+ FOREIGN KEY(hotspot_id) REFERENCES hotspots(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS judgments (
+ cache_key VARCHAR(64) PRIMARY KEY, payload TEXT NOT NULL, created_at VARCHAR(40) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS notifications (
+ id VARCHAR(40) PRIMARY KEY, hotspot_id VARCHAR(64), title VARCHAR(1000) NOT NULL,
+ content TEXT NOT NULL, is_read BOOLEAN NOT NULL DEFAULT FALSE, created_at VARCHAR(40) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS job_runs (
+ id VARCHAR(40) PRIMARY KEY, query_text VARCHAR(160) NOT NULL, status VARCHAR(20) NOT NULL,
+ collected INT NOT NULL DEFAULT 0, analyzed INT NOT NULL DEFAULT 0, saved INT NOT NULL DEFAULT 0,
+ created_at VARCHAR(40) NOT NULL, finished_at VARCHAR(40), message TEXT
+);
+CREATE TABLE IF NOT EXISTS source_health (
+ source VARCHAR(40) PRIMARY KEY, status VARCHAR(20) NOT NULL, item_count INT NOT NULL,
+ duration_ms BIGINT NOT NULL, message VARCHAR(600), checked_at VARCHAR(40) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS app_settings (setting_key VARCHAR(80) PRIMARY KEY, setting_value TEXT NOT NULL);
