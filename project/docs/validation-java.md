@@ -2,7 +2,13 @@
 
 更新时间：2026-11-14。
 
-## 已完成
+## 正式依赖验证
+
+2026-11-14，GitHub Actions 在 Ubuntu、JDK 21、Node.js 24 环境对提交 16ac939 进行了完整验证：npm ci、Vue 类型检查与 Vite 构建、正式 backend/pom.xml 的 Maven verify 全部通过。18 项后端测试零失败、零错误、零跳过，并生成 Spring Boot JAR。
+
+[查看正式构建日志](https://github.com/liyihan407-blip/aihot/actions/runs/43563011700)
+
+## 本机验证
 
 - 使用本机缓存的离线校验依赖运行了 18 项 Java 测试，全部通过。覆盖请求验证、分析预算和缓存、去重、收藏、多监控关联、通知、来源失败、解析、访问过滤、百炼兼容请求和个人模型设置。
 - 前端执行过 `npm ci`（使用本机离线缓存）和 Vue 类型检查、Vite 构建，均通过。
@@ -13,7 +19,7 @@
 
 Java 测试使用未提交的 `backend/target/validation-pom.xml`，其中 WebSocket、Jsoup、H2 等使用本机已有的替代版本，并以 `spring-context-support` 替代不可用的邮件 starter。它用于检查业务逻辑，**不能替代正式 pom.xml 的完整依赖构建**。
 
-当前执行环境无法访问 Maven 仓库；对正式 pom 执行离线打包时，缺少可解析的插件或依赖。因此尚未生成经正式依赖验证的 JAR。请在可联网的机器上执行 `npm ci`、`npm test`、`npm run build`。
+当前执行环境无法访问 Maven 仓库；对正式 pom 执行离线打包时，缺少可解析的插件或依赖。该本机限制已通过上述 GitHub Actions 的正式依赖构建另行验证；本机复现时可在可联网的机器上执行 `npm ci`、`npm test`、`npm run build`。
 
 ## 尚需在实际配置环境中验证
 
